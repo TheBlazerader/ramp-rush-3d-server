@@ -45,9 +45,11 @@ wss.on("connection", socket => {
         if (message.type === "join") {
             if (players.has(id)) return;
             const name = typeof message.name === "string" ? message.name.trim().slice(0, 20) : "";
+            const color = typeof message.color === "string" && /^#[0-9a-f]{6}$/i.test(message.color) ? message.color.toLowerCase() : "#e82e42";
             const player = {
                 id,
                 name: name || "Player",
+                color,
                 position: { x: 0, y: 2, z: 0 },
                 quaternion: { x: 0, y: 0, z: 0, w: 1 },
                 velocity: { x: 0, y: 0, z: 0 }
@@ -67,6 +69,9 @@ wss.on("connection", socket => {
             if (!p || !q || ![p.x, p.y, p.z].every(Number.isFinite) || ![q.x, q.y, q.z, q.w].every(Number.isFinite)) return;
             const player = players.get(id);
             player.name = typeof message.name === "string" ? message.name.trim().slice(0, 20) || "Player" : player.name;
+            if (typeof message.color === "string" && /^#[0-9a-f]{6}$/i.test(message.color)) {
+                player.color = message.color.toLowerCase();
+            }
             player.position = { x: p.x, y: p.y, z: p.z };
             player.quaternion = { x: q.x, y: q.y, z: q.z, w: q.w };
             if (message.velocity && [message.velocity.x, message.velocity.y, message.velocity.z].every(Number.isFinite)) {
