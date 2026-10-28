@@ -1,0 +1,13 @@
+{
+  "name": "ramp-rush-3d-server",
+  "version": "1.0.0",
+  "private": true,
+  "description": "WebSocket multiplayer server for Ramp Rush 3D",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "ws": "^8.18.0"
+  }
+}
