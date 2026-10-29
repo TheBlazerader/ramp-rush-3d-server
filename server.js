@@ -54,7 +54,7 @@ function cleanPlayer(player) {
         id: player.id,
         name: player.name,
         color: player.color,
-        vehicleType: player.vehicleType === "plane" ? "plane" : "car",
+        vehicleType: ["plane", "motorcycle"].includes(player.vehicleType) ? player.vehicleType : "car",
         position: player.position,
         quaternion: player.quaternion,
         velocity: player.velocity,
@@ -188,7 +188,7 @@ wss.on("connection", socket => {
             const player = players.get(id);
             player.name = typeof message.name === "string" ? message.name.trim().slice(0, 20) || "Player" : player.name;
             if (typeof message.color === "string" && /^#[0-9a-f]{6}$/i.test(message.color)) player.color = message.color.toLowerCase();
-            player.vehicleType = message.vehicleType === "plane" ? "plane" : "car";
+            player.vehicleType = ["plane", "motorcycle"].includes(message.vehicleType) ? message.vehicleType : "car";
             player.position = { x: p.x, y: p.y, z: p.z };
             player.quaternion = { x: q.x, y: q.y, z: q.z, w: q.w };
             if (message.velocity && validFiniteVector(message.velocity, ["x", "y", "z"])) {
