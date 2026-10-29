@@ -227,20 +227,42 @@ wss.on("connection", socket => {
         if (message.type === "kick_player") {
             if (id !== partyLeaderId) {
                 send(socket, { type: "error", message: "Only the party leader can kick players." });
+                send(socket, { type: "kick_result", success: false, targetId: String(message.targetId || ""), message: "Only the party leader can kick players." });
                 return;
             }
             const targetId = String(message.targetId || "");
             if (!targetId || targetId === partyLeaderId || !players.has(targetId)) {
-                send(socket, { type: "error", message: "That player cannot be kicked." });
+                const reason = "That player is no longer in the lobby or cannot be kicked.";
+                send(socket, { type: "kick_result", success: false, targetId, message: reason });
                 return;
             }
-            const targetSocket = [...wss.clients].find(client => client.playerId === targetId);
-            if (targetSocket) {
-                send(targetSocket, { type: "kicked", by: id });
-                setTimeout(() => {
-                    try { targetSocket.close(4001, "Kicked by party leader"); } catch (_) {}
-                }, 50);
+            const targetSocket = [...wss.clients].find(client => String(client.playerId) === targetId);
+            const targetPlayer = players.get(targetId);
+            if (!targetSocket || targetSocket.readyState !== WebSocket.OPEN) {
+                // Clean up a stale lobby entry instead of leaving an unkickable player.
+                players.delete(targetId);
+                broadcast({ type: "player_left", id: targetId, name: targetPlayer.name, leaderId: partyLeaderId });
+                send(socket, { type: "kick_result", success: false, targetId, message: "The player's connection was already closed; the stale lobby entry was removed." });
+                return;
             }
+
+            // Send the explicit kick event first, then immediately remove the target
+            // from authoritative lobby state so their future messages are ignored.
+            send(targetSocket, { type: "kicked", by: id, reason: "Kicked by party leader" });
+            players.delete(targetId);
+            broadcast({ type: "player_left", id: targetId, name: targetPlayer.name, leaderId: partyLeaderId });
+            send(socket, { type: "kick_result", success: true, targetId, name: targetPlayer.name });
+
+            // Close with a dedicated code. The client also treats code 4001 as a kick
+            // in case the explicit `kicked` message is lost during a flaky connection.
+            setTimeout(() => {
+                try {
+                    if (targetSocket.readyState === WebSocket.OPEN || targetSocket.readyState === WebSocket.CONNECTING) {
+                        targetSocket.close(4001, "Kicked by party leader");
+                    }
+                } catch (_) {}
+            }, 150);
+            console.log(`${targetPlayer.name} was kicked by ${players.get(id)?.name || "party leader"} (${targetId})`);
             return;
         }
 
