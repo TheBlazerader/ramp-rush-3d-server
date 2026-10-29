@@ -251,9 +251,12 @@ wss.on("connection", socket => {
             }
             const sanitized = sanitizeWorld(message.world);
             if (!sanitized) {
-                send(socket, { type: "error", message: "Arena update was invalid or too large." });
+                send(socket, { type: "error", message: "Arena update rejected: invalid object data, duplicate IDs, or more than 500 objects. No changes were published." });
+                console.warn(`Rejected arena publish from ${players.get(id)?.name || id}.`);
                 return;
             }
+            // Store a server-owned snapshot and broadcast that exact snapshot to all
+            // clients, including the leader. Clients replace their local arena from it.
             worldState = sanitized;
             worldRevision++;
             respawnEveryoneOnGrid();
@@ -265,7 +268,8 @@ wss.on("connection", socket => {
                 world: worldState,
                 players: currentPlayers
             });
-            console.log(`Arena revision ${worldRevision} published by ${players.get(id).name}; respawned ${players.size} player(s).`);
+            send(socket, { type: "world_commit_ack", revision: worldRevision, objectCount: worldState.length });
+            console.log(`Arena revision ${worldRevision} published by ${players.get(id).name} (${worldState.length} objects); respawned ${players.size} player(s).`);
             return;
         }
     });
