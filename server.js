@@ -31,6 +31,7 @@ wss.on("connection", socket => {
     socket.playerId = id;
     socket.isAlive = true;
     socket.lastCollisionAt = 0;
+    socket.lastChatAt = 0;
     socket.on("pong", () => { socket.isAlive = true; });
 
     socket.on("message", rawMessage => {
@@ -82,6 +83,25 @@ wss.on("connection", socket => {
                 };
             }
             broadcast({ type: "player_state", player }, socket);
+            return;
+        }
+
+        // Relay chat using the player's server-registered name, not a name
+        // supplied with each chat message. Keep messages short and rate-limit.
+        if (message.type === "chat_message") {
+            const now = Date.now();
+            if (now - socket.lastChatAt < 300) return;
+            const text = typeof message.text === "string" ? message.text.trim().slice(0, 200) : "";
+            if (!text) return;
+            socket.lastChatAt = now;
+            const player = players.get(id);
+            broadcast({
+                type: "chat_message",
+                id,
+                name: player.name,
+                text,
+                timestamp: now
+            });
             return;
         }
 
