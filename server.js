@@ -70,8 +70,10 @@ function validFiniteVector(value, keys) {
 // A velocity drop is treated as a player-to-player impact only when another
 // player is close to the player who suddenly lost speed. The server owns this
 // check so clients cannot directly nominate an impact target.
-const IMPACT_MIN_PRE_SPEED = 8;
-const IMPACT_MAX_POST_SPEED = 1.8;
+// The game speedometer uses 3.6 km/h per velocity unit per second.
+// Require at least 115 km/h before impact and a drop to 15 km/h or less.
+const IMPACT_MIN_PRE_SPEED = 115 / 3.6;
+const IMPACT_MAX_POST_SPEED = 15 / 3.6;
 const IMPACT_SPEED_RATIO = 0.25;
 const IMPACT_NEAR_DISTANCE = 4.5;
 const IMPACT_SAMPLE_MIN_AGE = 35;
